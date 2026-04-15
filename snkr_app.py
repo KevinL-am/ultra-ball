@@ -60,7 +60,7 @@ def connect_gsheet():
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
         client = gspread.authorize(creds)
-        ss = client.open_by_key("1gGDyFS3Ecq0h45zvVVpV72ZimxKvRy-HhNUb4IBLNG4")
+      ss = client.open_by_key("1EFSlY13D9Ns8PAise9BTfSiCNHxuC3q3NHpSQ8tOLgs")
         main = ss.sheet1
         try: hist = ss.worksheet("SNKR_PSA10_History")
         except: 
