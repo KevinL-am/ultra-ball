@@ -1,5 +1,6 @@
 gspread
 google-auth
 playwright
+playwright-stealth
 beautifulsoup4
 pandas
