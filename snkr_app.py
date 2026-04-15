@@ -3,15 +3,14 @@ import gspread
 from google.oauth2.service_account import Credentials
 from playwright.sync_api import sync_playwright
 from playwright_stealth import stealth
-import sys, subprocess, re, time, random
+import sys, subprocess, re, time
 
 # 1. 頁面設定
 st.set_page_config(page_title="i-Craft Ultra Quant", page_icon="🟡")
 
-# --- 2. 雲端環境安裝 (最緊要) ---
+# --- 2. 雲端環境安裝 ---
 @st.cache_resource
 def install_playwright():
-    # 呢度係叫雲端裝返必要嘅組件
     subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])
 
 install_playwright()
@@ -32,33 +31,33 @@ def connect_gsheet():
 
 sheet = connect_gsheet()
 
-# 5. 隱形捕捉核心
-def fetch_psa10_stealth(url):
+# 5. 特種捕捉邏輯 (單兵作戰)
+def fetch_one_by_one(url):
     with sync_playwright() as p:
-        # 強力偽裝啟動
-        browser = p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'])
+        # 用最輕量化嘅方式開 Browser
+        browser = p.chromium.launch(headless=True, args=['--no-sandbox', '--disable-dev-shm-usage'])
         context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/123.0.0.0")
         page = context.new_page()
-        stealth(page) # 戴上面具
+        stealth(page)
         
         try:
-            page.goto(url, wait_until="domcontentloaded", timeout=45000)
-            time.sleep(3) # 扮人睇嘢
+            # 慢慢行，唔好急
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            time.sleep(5)
             
             # 搵 PSA 10 掣
             btn = page.locator('button:has-text("PSA 10")').first
             if btn.is_visible():
                 btn.click()
-                time.sleep(2) # 等價錢跳
+                time.sleep(3)
             
             content = page.content()
-            # 搵 HK $XXXX，大佬要嘅精準位
             price = re.search(r'HK\s?\$[\d,]+', content)
-            price_val = price.group(0) if price else "執唔到價錢 (防禦太強)"
+            price_val = price.group(0) if price else "執唔到價錢"
             
-            return {"名稱": page.title()[:20], "價格": price_val}
+            return {"價格": price_val}
         except:
-            return {"名稱": "超時", "價格": "N/A"}
+            return {"價格": "連線超時"}
         finally:
             browser.close()
 
@@ -68,8 +67,8 @@ if st.button("H"):
     if sheet:
         urls = [u.strip() for u in sheet.col_values(1) if "snkrdunk.com" in u]
         if urls:
-            with st.status("🕵️ 隱形球滲透中...") as s:
-                for url in urls:
-                    data = fetch_psa10_stealth(url)
-                    st.write(f"**{data['名稱']}**: {data['價格']}")
-            st.success("任務完成！")
+            status = st.status("🕵️ 隱形球一個個滲透中...")
+            for url in urls:
+                data = fetch_one_by_one(url)
+                st.write(f"結果: **{data['價格']}**")
+            status.update(label="✅ 捕捉完畢", state="complete")
